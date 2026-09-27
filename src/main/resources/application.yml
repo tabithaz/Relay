@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/relay}
+    username: ${DATABASE_USER:relay}
+    password: ${DATABASE_PASSWORD:relay}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+server:
+  port: ${PORT:8080}
