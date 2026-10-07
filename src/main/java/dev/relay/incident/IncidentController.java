@@ -2,32 +2,46 @@ package dev.relay.incident;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/incidents")
 public class IncidentController {
-    private final IncidentRepository incidents;
-    public IncidentController(IncidentRepository incidents){this.incidents=incidents;}
+    private final IncidentService service;
+
+    public IncidentController(IncidentService service) {
+        this.service = service;
+    }
 
     @GetMapping
-    public List<Incident> list(){ return incidents.findAll(); }
+    public List<Incident> list() {
+        return service.list();
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Incident create(@Valid @RequestBody CreateIncident request){
-        return incidents.save(new Incident(request.title(), request.description()));
+    public Incident create(@Valid @RequestBody CreateIncident request) {
+        return service.create(request.title(), request.description());
     }
 
     @PatchMapping("/{id}/status")
-    public Incident updateStatus(@PathVariable Long id, @RequestBody StatusUpdate request){
-        Incident incident=incidents.findById(id).orElseThrow(IncidentNotFoundException::new);
-        incident.setStatus(request.status());
-        return incidents.save(incident);
+    public Incident updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdate request) {
+        return service.updateStatus(id, request.status());
     }
 
-    public record CreateIncident(@NotBlank String title, @NotBlank String description){}
-    public record StatusUpdate(IncidentStatus status){}
+    @GetMapping("/{id}/activity")
+    public List<IncidentActivityResponse> activity(@PathVariable Long id) {
+        return service.activityFor(id);
+    }
+
+    public record CreateIncident(
+            @NotBlank @Size(max = 255) String title,
+            @NotBlank @Size(max = 2000) String description
+    ) {}
+
+    public record StatusUpdate(@NotNull IncidentStatus status) {}
 }
