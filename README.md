@@ -8,6 +8,8 @@ Relay is an evolving collaborative workspace for engineering teams. The current 
 - Create, list, retrieve, and rename workspaces with immutable, unique URL-friendly slugs
 - Paginated workspace listing (default 20, maximum 100) with deterministic ordering
 - Workspace name and slug validation; HTTP 404 for missing workspaces and 409 for duplicate slugs
+- Create, list, retrieve, and update projects within a workspace; project slugs are unique per workspace and immutable
+- Project listing uses bounded, stable pagination and scoped project lookups
 - Create and list incidents
 - Change incident status (investigating, identified, monitoring, resolved)
 - Persist an activity entry when an incident is created or its status changes
@@ -53,6 +55,28 @@ curl -X PATCH http://localhost:8080/api/workspaces/1 \
 
 Workspace slugs must be 3–63 characters, lowercase letters and numbers separated by single hyphens. Slugs are unique and cannot be changed after creation. Names may be changed, but must not be blank or exceed 120 characters. List responses use Spring Data's paginated JSON representation with `content`, `totalElements`, `totalPages`, `number`, and `size`.
 
+### Project API
+
+Projects belong to exactly one workspace. Create a project under workspace ID `1`:
+
+```bash
+curl -X POST http://localhost:8080/api/workspaces/1/projects \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Platform","slug":"platform","description":"Internal services"}'
+```
+
+List, retrieve, or update projects:
+
+```bash
+curl 'http://localhost:8080/api/workspaces/1/projects?page=0&size=20'
+curl http://localhost:8080/api/workspaces/1/projects/7
+curl -X PATCH http://localhost:8080/api/workspaces/1/projects/7 \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Platform Services","description":"Service roadmap"}'
+```
+
+Project names are required (maximum 120 characters), slugs follow the workspace slug format and are unique **within each workspace**, and descriptions are optional (maximum 2,000 characters). Slugs and workspace ownership are immutable. PATCH replaces the project's name and description; omit the description to clear it. A missing workspace or a project outside the requested workspace returns HTTP 404. Duplicate slugs within the same workspace return HTTP 409.
+
 ### Incident API
 
 Create an incident:
@@ -87,6 +111,6 @@ mvn verify
 
 ## Direction
 
-Workspaces are the foundation for upcoming organization membership and project/task management. Planned work includes role-based access control, a React/TypeScript client, real-time collaboration, comments, notifications, search, file storage, workflow automation, analytics, and production deployment/observability.
+Workspaces and projects are the foundation for upcoming organization membership and task management. Planned work includes role-based access control, a React/TypeScript client, real-time collaboration, comments, notifications, search, file storage, workflow automation, analytics, and production deployment/observability.
 
-**Current limitations:** Workspace records are not yet associated with users or incidents, and the API has no authentication or tenant isolation. Workspace endpoints are therefore **not access-controlled**. The schema currently uses Hibernate `ddl-auto: update` rather than versioned migrations. Do not expose this API publicly or use it with sensitive data until authorization, tenancy boundaries, and migrations are implemented.
+**Current limitations:** Workspace and project records are not yet associated with authenticated users, and incidents are not yet scoped to workspaces. The API has no authentication or authorization; workspace and project endpoints are **not access-controlled**. Workspace-scoped project queries prevent accidental cross-workspace reads, but **do not provide tenant security**. The schema currently uses Hibernate `ddl-auto: update` rather than versioned migrations. Do not expose this API publicly or use it with sensitive data until authorization, tenancy boundaries, and migrations are implemented.
