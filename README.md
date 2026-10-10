@@ -9,6 +9,8 @@ Relay is an evolving collaborative workspace for engineering teams. The current 
 - Paginated workspace listing (default 20, maximum 100) with deterministic ordering
 - Workspace name and slug validation; HTTP 404 for missing workspaces and 409 for duplicate slugs
 - Create, list, retrieve, and update projects within a workspace; project slugs are unique per workspace and immutable
+- Create, list, retrieve, and update project tasks with priority, due dates, and status transitions
+- Filter tasks by status with stable pagination and strict workspace/project-scoped lookups
 - Project listing uses bounded, stable pagination and scoped project lookups
 - Create and list incidents
 - Change incident status (investigating, identified, monitoring, resolved)
@@ -77,6 +79,36 @@ curl -X PATCH http://localhost:8080/api/workspaces/1/projects/7 \
 
 Project names are required (maximum 120 characters), slugs follow the workspace slug format and are unique **within each workspace**, and descriptions are optional (maximum 2,000 characters). Slugs and workspace ownership are immutable. PATCH replaces the project's name and description; omit the description to clear it. A missing workspace or a project outside the requested workspace returns HTTP 404. Duplicate slugs within the same workspace return HTTP 409.
 
+### Task API
+
+Tasks belong to exactly one project in one workspace. Create a task:
+
+```bash
+curl -X POST http://localhost:8080/api/workspaces/1/projects/7/tasks \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Fix login timeout","description":"Investigate session expiry","priority":"HIGH","dueAt":"2026-11-01T12:00:00Z"}'
+```
+
+List tasks (newest first), optionally filtered by status, retrieve one, or replace editable details:
+
+```bash
+curl 'http://localhost:8080/api/workspaces/1/projects/7/tasks?status=TODO&page=0&size=20'
+curl http://localhost:8080/api/workspaces/1/projects/7/tasks/9
+curl -X PATCH http://localhost:8080/api/workspaces/1/projects/7/tasks/9 \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Fix session timeout","priority":"URGENT","description":null,"dueAt":null}'
+```
+
+Change task status separately:
+
+```bash
+curl -X PATCH http://localhost:8080/api/workspaces/1/projects/7/tasks/9/status \
+  -H 'Content-Type: application/json' \
+  -d '{"status":"IN_PROGRESS"}'
+```
+
+Task status values: `TODO`, `IN_PROGRESS`, `BLOCKED`, `DONE`. Priorities: `LOW`, `NORMAL`, `HIGH`, `URGENT`. New tasks start in `TODO`. Titles are required (up to 160 characters); descriptions are optional (up to 4,000). `dueAt` accepts an ISO-8601 instant or `null`. PATCH details replaces title, description, priority, and due date together; omitting description/due date clears them. Status changes use a separate endpoint; repeating the current status does not write again. Responses include creation/update timestamps and a JPA version field for future concurrency controls. Task reads and updates require the matching workspace and project in the URL; a mismatched task returns 404. This is scoping, **not authentication**.
+
 ### Incident API
 
 Create an incident:
@@ -111,6 +143,6 @@ mvn verify
 
 ## Direction
 
-Workspaces and projects are the foundation for upcoming organization membership and task management. Planned work includes role-based access control, a React/TypeScript client, real-time collaboration, comments, notifications, search, file storage, workflow automation, analytics, and production deployment/observability.
+Workspaces, projects, and tasks are the foundation for upcoming organization membership and access controls. Planned work includes role-based access control, a React/TypeScript client, real-time collaboration, comments, notifications, search, file storage, workflow automation, analytics, and production deployment/observability.
 
 **Current limitations:** Workspace and project records are not yet associated with authenticated users, and incidents are not yet scoped to workspaces. The API has no authentication or authorization; workspace and project endpoints are **not access-controlled**. Workspace-scoped project queries prevent accidental cross-workspace reads, but **do not provide tenant security**. The schema currently uses Hibernate `ddl-auto: update` rather than versioned migrations. Do not expose this API publicly or use it with sensitive data until authorization, tenancy boundaries, and migrations are implemented.
