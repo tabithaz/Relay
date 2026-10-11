@@ -7,17 +7,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import dev.relay.project.ProjectNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(TaskController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class TaskControllerTest {
     private static final String PATH = "/api/workspaces/1/projects/7/tasks";
 
     @Autowired MockMvc mvc;
     @MockBean TaskService service;
+    @MockBean JwtDecoder jwtDecoder;
 
     @Test
     void createsTask() throws Exception {

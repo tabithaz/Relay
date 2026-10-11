@@ -5,6 +5,7 @@ Relay is an evolving collaborative workspace for engineering teams. The current 
 ## Implemented
 
 - Java 21 / Spring Boot REST API backed by PostgreSQL
+- Stateless OAuth2 JWT bearer authentication with issuer, audience, signature, and expiry validation
 - Create, list, retrieve, and rename workspaces with immutable, unique URL-friendly slugs
 - Paginated workspace listing (default 20, maximum 100) with deterministic ordering
 - Workspace name and slug validation; HTTP 404 for missing workspaces and 409 for duplicate slugs
@@ -21,12 +22,19 @@ Relay is an evolving collaborative workspace for engineering teams. The current 
 
 ## Local development
 
-Requires Java 21, Maven, and Docker Compose.
+Requires Java 21, Maven, Docker Compose, and an OpenID Connect-compatible identity provider that publishes signing keys (JWKS). Relay validates access tokens; it does not issue them.
+
+Configure the issuer, signing-key endpoint, and expected API audience (replace the example values with your provider's real configuration):
 
 ```bash
+export RELAY_JWT_ISSUER="https://identity.example.com/realms/relay"
+export RELAY_JWT_JWKS_URI="https://identity.example.com/realms/relay/protocol/openid-connect/certs"
+export RELAY_JWT_AUDIENCE="relay-api"
 docker compose up -d
 mvn spring-boot:run
 ```
+
+Obtain an access token for this API from your identity provider, then set `RELAY_ACCESS_TOKEN` before running the requests below. The issuer and audience must match the token claims. Missing, expired, incorrectly signed, or otherwise invalid tokens return HTTP 401. Do not commit tokens or credentials. Use HTTPS for your identity provider outside local development.
 
 The API runs at `http://localhost:8080`. The PostgreSQL configuration in `docker-compose.yml` is for local development only; use external secrets for non-local deployments.
 
@@ -35,7 +43,7 @@ The API runs at `http://localhost:8080`. The PostgreSQL configuration in `docker
 Create a workspace:
 
 ```bash
-curl -X POST http://localhost:8080/api/workspaces \
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" -X POST http://localhost:8080/api/workspaces \
   -H 'Content-Type: application/json' \
   -d '{"name":"Engineering","slug":"engineering"}'
 ```
@@ -43,14 +51,14 @@ curl -X POST http://localhost:8080/api/workspaces \
 List workspaces (newest first):
 
 ```bash
-curl 'http://localhost:8080/api/workspaces?page=0&size=20'
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" 'http://localhost:8080/api/workspaces?page=0&size=20'
 ```
 
 Retrieve or rename a workspace (replace `1` with its ID):
 
 ```bash
-curl http://localhost:8080/api/workspaces/1
-curl -X PATCH http://localhost:8080/api/workspaces/1 \
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" http://localhost:8080/api/workspaces/1
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" -X PATCH http://localhost:8080/api/workspaces/1 \
   -H 'Content-Type: application/json' \
   -d '{"name":"Platform Engineering"}'
 ```
@@ -62,7 +70,7 @@ Workspace slugs must be 3–63 characters, lowercase letters and numbers separat
 Projects belong to exactly one workspace. Create a project under workspace ID `1`:
 
 ```bash
-curl -X POST http://localhost:8080/api/workspaces/1/projects \
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" -X POST http://localhost:8080/api/workspaces/1/projects \
   -H 'Content-Type: application/json' \
   -d '{"name":"Platform","slug":"platform","description":"Internal services"}'
 ```
@@ -70,9 +78,9 @@ curl -X POST http://localhost:8080/api/workspaces/1/projects \
 List, retrieve, or update projects:
 
 ```bash
-curl 'http://localhost:8080/api/workspaces/1/projects?page=0&size=20'
-curl http://localhost:8080/api/workspaces/1/projects/7
-curl -X PATCH http://localhost:8080/api/workspaces/1/projects/7 \
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" 'http://localhost:8080/api/workspaces/1/projects?page=0&size=20'
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" http://localhost:8080/api/workspaces/1/projects/7
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" -X PATCH http://localhost:8080/api/workspaces/1/projects/7 \
   -H 'Content-Type: application/json' \
   -d '{"name":"Platform Services","description":"Service roadmap"}'
 ```
@@ -84,7 +92,7 @@ Project names are required (maximum 120 characters), slugs follow the workspace 
 Tasks belong to exactly one project in one workspace. Create a task:
 
 ```bash
-curl -X POST http://localhost:8080/api/workspaces/1/projects/7/tasks \
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" -X POST http://localhost:8080/api/workspaces/1/projects/7/tasks \
   -H 'Content-Type: application/json' \
   -d '{"title":"Fix login timeout","description":"Investigate session expiry","priority":"HIGH","dueAt":"2026-11-01T12:00:00Z"}'
 ```
@@ -92,9 +100,9 @@ curl -X POST http://localhost:8080/api/workspaces/1/projects/7/tasks \
 List tasks (newest first), optionally filtered by status, retrieve one, or replace editable details:
 
 ```bash
-curl 'http://localhost:8080/api/workspaces/1/projects/7/tasks?status=TODO&page=0&size=20'
-curl http://localhost:8080/api/workspaces/1/projects/7/tasks/9
-curl -X PATCH http://localhost:8080/api/workspaces/1/projects/7/tasks/9 \
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" 'http://localhost:8080/api/workspaces/1/projects/7/tasks?status=TODO&page=0&size=20'
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" http://localhost:8080/api/workspaces/1/projects/7/tasks/9
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" -X PATCH http://localhost:8080/api/workspaces/1/projects/7/tasks/9 \
   -H 'Content-Type: application/json' \
   -d '{"title":"Fix session timeout","priority":"URGENT","description":null,"dueAt":null}'
 ```
@@ -102,7 +110,7 @@ curl -X PATCH http://localhost:8080/api/workspaces/1/projects/7/tasks/9 \
 Change task status separately:
 
 ```bash
-curl -X PATCH http://localhost:8080/api/workspaces/1/projects/7/tasks/9/status \
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" -X PATCH http://localhost:8080/api/workspaces/1/projects/7/tasks/9/status \
   -H 'Content-Type: application/json' \
   -d '{"status":"IN_PROGRESS"}'
 ```
@@ -114,7 +122,7 @@ Task status values: `TODO`, `IN_PROGRESS`, `BLOCKED`, `DONE`. Priorities: `LOW`,
 Create an incident:
 
 ```bash
-curl -X POST http://localhost:8080/api/incidents \
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" -X POST http://localhost:8080/api/incidents \
   -H 'Content-Type: application/json' \
   -d '{"title":"API outage","description":"Requests are timing out"}'
 ```
@@ -122,7 +130,7 @@ curl -X POST http://localhost:8080/api/incidents \
 Change its status (replace `1` with the returned ID):
 
 ```bash
-curl -X PATCH http://localhost:8080/api/incidents/1/status \
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" -X PATCH http://localhost:8080/api/incidents/1/status \
   -H 'Content-Type: application/json' \
   -d '{"status":"IDENTIFIED"}'
 ```
@@ -130,7 +138,7 @@ curl -X PATCH http://localhost:8080/api/incidents/1/status \
 View the timeline:
 
 ```bash
-curl http://localhost:8080/api/incidents/1/activity
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" http://localhost:8080/api/incidents/1/activity
 ```
 
 Timeline entries include `type` (`CREATED` or `STATUS_CHANGED`), `previousStatus`, `currentStatus`, and `occurredAt`. Repeating an unchanged status does not create a duplicate entry. Existing incidents created before the timeline feature have no retroactive creation entry.
@@ -145,4 +153,4 @@ mvn verify
 
 Workspaces, projects, and tasks are the foundation for upcoming organization membership and access controls. Planned work includes role-based access control, a React/TypeScript client, real-time collaboration, comments, notifications, search, file storage, workflow automation, analytics, and production deployment/observability.
 
-**Current limitations:** Workspace and project records are not yet associated with authenticated users, and incidents are not yet scoped to workspaces. The API has no authentication or authorization; workspace and project endpoints are **not access-controlled**. Workspace-scoped project queries prevent accidental cross-workspace reads, but **do not provide tenant security**. The schema currently uses Hibernate `ddl-auto: update` rather than versioned migrations. Do not expose this API publicly or use it with sensitive data until authorization, tenancy boundaries, and migrations are implemented.
+**Current limitations:** JWT authentication now protects API endpoints, but workspace membership and role-based authorization are not yet enforced. Any valid access token for this API can access every workspace, project, task, and incident. Records are not yet associated with authenticated users, and incidents are not scoped to workspaces. Workspace-scoped project queries prevent accidental cross-workspace reads, but **do not provide tenant security**. The schema currently uses Hibernate `ddl-auto: update` rather than versioned migrations. Do not expose this API publicly or use it with sensitive data until workspace authorization, tenancy boundaries, and migrations are implemented.
