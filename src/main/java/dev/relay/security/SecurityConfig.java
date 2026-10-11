@@ -47,7 +47,7 @@ public class SecurityConfig {
     }
 
     static OAuth2TokenValidator<Jwt> audienceValidator(String expectedAudience) {
-        return jwt -> jwt.getAudience().contains(expectedAudience)
+        return jwt -> jwt.getAudience() != null && jwt.getAudience().contains(expectedAudience)
                 ? OAuth2TokenValidatorResult.success()
                 : OAuth2TokenValidatorResult.failure(
                         new OAuth2Error("invalid_token", "Token audience is not authorized for Relay", null));
