@@ -58,7 +58,8 @@ class SecurityConfigTest {
                 .claim("aud", List.of("another-api", "relay-api")).build();
         Jwt invalid = Jwt.withTokenValue("token").header("alg", "RS256")
                 .claim("aud", List.of("another-api")).build();
-        Jwt missing = Jwt.withTokenValue("token").header("alg", "RS256").build();
+        Jwt missing = Jwt.withTokenValue("token").header("alg", "RS256")
+                .subject("user-42").build();
 
         assertThat(SecurityConfig.audienceValidator("relay-api").validate(valid).hasErrors()).isFalse();
         assertThat(SecurityConfig.audienceValidator("relay-api").validate(invalid).hasErrors()).isTrue();
