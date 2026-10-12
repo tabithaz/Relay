@@ -45,11 +45,11 @@ class SecurityConfigTest {
         Jwt jwt = Jwt.withTokenValue("valid").header("alg", "RS256")
                 .subject("user-42").build();
         when(jwtDecoder.decode("valid")).thenReturn(jwt);
-        when(workspaces.list(0, 20)).thenReturn(Page.empty());
+        when(workspaces.list("user-42", 0, 20)).thenReturn(Page.empty());
 
         mvc.perform(get("/api/workspaces").header("Authorization", "Bearer valid"))
                 .andExpect(status().isOk());
-        verify(workspaces).list(0, 20);
+        verify(workspaces).list("user-42", 0, 20);
     }
 
     @Test

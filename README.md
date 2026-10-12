@@ -6,6 +6,9 @@ Relay is an evolving collaborative workspace for engineering teams. The current 
 
 - Java 21 / Spring Boot REST API backed by PostgreSQL
 - Stateless OAuth2 JWT bearer authentication with issuer, audience, signature, and expiry validation
+- Workspace membership with OWNER, ADMIN, EDITOR, and VIEWER roles; new workspace creators become owners atomically
+- Workspace-scoped read/write authorization for workspaces, projects, and tasks; list results only include the caller's workspaces
+- Owner-managed membership creation and paginated member listing
 - Create, list, retrieve, and rename workspaces with immutable, unique URL-friendly slugs
 - Paginated workspace listing (default 20, maximum 100) with deterministic ordering
 - Workspace name and slug validation; HTTP 404 for missing workspaces and 409 for duplicate slugs
@@ -64,6 +67,19 @@ curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" -X PATCH http://localhost:80
 ```
 
 Workspace slugs must be 3–63 characters, lowercase letters and numbers separated by single hyphens. Slugs are unique and cannot be changed after creation. Names may be changed, but must not be blank or exceed 120 characters. List responses use Spring Data's paginated JSON representation with `content`, `totalElements`, `totalPages`, `number`, and `size`.
+
+### Membership and permissions
+
+Creating a workspace makes the authenticated JWT subject its `OWNER` in the same database transaction. The workspace list shows only workspaces the caller belongs to. All workspace/project/task endpoints require membership; reads permit all roles, while writes require `OWNER`, `ADMIN`, or `EDITOR`. `VIEWER` is read-only. Unauthorized access returns HTTP 403.
+
+Only an `OWNER` can add or list members. The `subject` must match the new member's stable OIDC `sub` claim from the configured identity provider. Adding another `OWNER` is not supported yet, and duplicate memberships return HTTP 409.
+
+```bash
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" -X POST http://localhost:8080/api/workspaces/1/members \
+  -H 'Content-Type: application/json' \
+  -d '{"subject":"user-77","role":"EDITOR"}'
+curl -H "Authorization: Bearer $RELAY_ACCESS_TOKEN" 'http://localhost:8080/api/workspaces/1/members?page=0&size=20'
+```
 
 ### Project API
 
@@ -153,4 +169,4 @@ mvn verify
 
 Workspaces, projects, and tasks are the foundation for upcoming organization membership and access controls. Planned work includes role-based access control, a React/TypeScript client, real-time collaboration, comments, notifications, search, file storage, workflow automation, analytics, and production deployment/observability.
 
-**Current limitations:** JWT authentication now protects API endpoints, but workspace membership and role-based authorization are not yet enforced. Any valid access token for this API can access every workspace, project, task, and incident. Records are not yet associated with authenticated users, and incidents are not scoped to workspaces. Workspace-scoped project queries prevent accidental cross-workspace reads, but **do not provide tenant security**. The schema currently uses Hibernate `ddl-auto: update` rather than versioned migrations. Do not expose this API publicly or use it with sensitive data until workspace authorization, tenancy boundaries, and migrations are implemented.
+**Current limitations:** Workspace, project, and task endpoints now enforce membership-based authorization, but the legacy incident endpoints remain global to all authenticated users and are **not tenant-isolated**. Member removal, role changes, owner transfers, and user invitations are not yet implemented. The schema currently uses Hibernate `ddl-auto: update` rather than versioned migrations. Existing workspaces created before membership support need an explicit owner backfill before they can be accessed. Do not expose this API publicly or use it with sensitive data until the remaining tenancy boundaries and migrations are implemented.

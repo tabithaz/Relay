@@ -23,10 +23,10 @@ class WorkspaceControllerTest {
 
     @Test
     void createsWorkspace() throws Exception {
-        when(service.create("Engineering", "engineering"))
+        when(service.create("Engineering", "engineering", "user-42"))
                 .thenReturn(WorkspaceResponse.from(new Workspace("Engineering", "engineering")));
 
-        mvc.perform(post("/api/workspaces")
+        mvc.perform(post("/api/workspaces").principal(() -> "user-42")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Engineering\",\"slug\":\"engineering\"}"))
                 .andExpect(status().isCreated())

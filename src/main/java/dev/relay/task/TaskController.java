@@ -1,6 +1,7 @@
 package dev.relay.task;
 
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -21,6 +22,7 @@ public class TaskController {
     }
 
     @PostMapping
+    @PreAuthorize("@workspacePolicy.canWrite(#workspaceId, authentication.name)")
     @ResponseStatus(HttpStatus.CREATED)
     public TaskResponse create(@PathVariable Long workspaceId, @PathVariable Long projectId,
                                @Valid @RequestBody CreateTask request) {
@@ -29,6 +31,7 @@ public class TaskController {
     }
 
     @GetMapping
+    @PreAuthorize("@workspacePolicy.canRead(#workspaceId, authentication.name)")
     public Page<TaskResponse> list(@PathVariable Long workspaceId,
                                    @PathVariable Long projectId,
                                    @RequestParam(required = false) TaskStatus status,
@@ -37,12 +40,14 @@ public class TaskController {
         return service.list(workspaceId, projectId, status, page, size);
     }
 
+    @PreAuthorize("@workspacePolicy.canRead(#workspaceId, authentication.name)")
     @GetMapping("/{taskId}")
     public TaskResponse get(@PathVariable Long workspaceId, @PathVariable Long projectId,
                             @PathVariable Long taskId) {
         return service.get(workspaceId, projectId, taskId);
     }
 
+    @PreAuthorize("@workspacePolicy.canWrite(#workspaceId, authentication.name)")
     @PatchMapping("/{taskId}")
     public TaskResponse update(@PathVariable Long workspaceId, @PathVariable Long projectId,
                                @PathVariable Long taskId,
@@ -51,6 +56,7 @@ public class TaskController {
                 request.description(), request.priority(), request.dueAt());
     }
 
+    @PreAuthorize("@workspacePolicy.canWrite(#workspaceId, authentication.name)")
     @PatchMapping("/{taskId}/status")
     public TaskResponse changeStatus(@PathVariable Long workspaceId,
                                      @PathVariable Long projectId,

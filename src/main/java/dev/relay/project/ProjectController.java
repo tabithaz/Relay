@@ -1,6 +1,7 @@
 package dev.relay.project;
 
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -20,6 +21,7 @@ public class ProjectController {
     }
 
     @PostMapping
+    @PreAuthorize("@workspacePolicy.canWrite(#workspaceId, authentication.name)")
     @ResponseStatus(HttpStatus.CREATED)
     public ProjectResponse create(@PathVariable Long workspaceId,
                                   @Valid @RequestBody CreateProject request) {
@@ -27,6 +29,7 @@ public class ProjectController {
     }
 
     @GetMapping
+    @PreAuthorize("@workspacePolicy.canRead(#workspaceId, authentication.name)")
     public Page<ProjectResponse> list(
             @PathVariable Long workspaceId,
             @RequestParam(defaultValue = "0") @Min(0) int page,
@@ -34,11 +37,13 @@ public class ProjectController {
         return service.list(workspaceId, page, size);
     }
 
+    @PreAuthorize("@workspacePolicy.canRead(#workspaceId, authentication.name)")
     @GetMapping("/{projectId}")
     public ProjectResponse get(@PathVariable Long workspaceId, @PathVariable Long projectId) {
         return service.get(workspaceId, projectId);
     }
 
+    @PreAuthorize("@workspacePolicy.canWrite(#workspaceId, authentication.name)")
     @PatchMapping("/{projectId}")
     public ProjectResponse update(@PathVariable Long workspaceId,
                                   @PathVariable Long projectId,
