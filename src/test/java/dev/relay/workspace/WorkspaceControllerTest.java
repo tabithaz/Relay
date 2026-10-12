@@ -72,10 +72,10 @@ class WorkspaceControllerTest {
 
     @Test
     void returnsConflictForExistingSlug() throws Exception {
-        when(service.create("Engineering", "engineering"))
+        when(service.create("Engineering", "engineering", "user-42"))
                 .thenThrow(new WorkspaceSlugConflictException());
 
-        mvc.perform(post("/api/workspaces")
+        mvc.perform(post("/api/workspaces").principal(() -> "user-42")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Engineering\",\"slug\":\"engineering\"}"))
                 .andExpect(status().isConflict());
