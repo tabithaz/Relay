@@ -24,15 +24,16 @@ public class WorkspaceService {
             throw new WorkspaceSlugConflictException();
         }
 
+        Workspace workspace;
         try {
-            // Flush now so a concurrent insert with the same slug returns HTTP 409.
-            Workspace workspace = workspaces.saveAndFlush(new Workspace(name.trim(), slug));
-            // Both writes share the transaction: no workspace can be created without an owner.
-            memberships.saveAndFlush(new WorkspaceMembership(workspace, subject, WorkspaceRole.OWNER));
-            return WorkspaceResponse.from(workspace);
+            // Flush the workspace insert to detect a concurrent slug collision.
+            workspace = workspaces.saveAndFlush(new Workspace(name.trim(), slug));
         } catch (DataIntegrityViolationException exception) {
             throw new WorkspaceSlugConflictException();
         }
+        // Membership insertion is in the same transaction. If it fails, creation rolls back.
+        memberships.saveAndFlush(new WorkspaceMembership(workspace, subject, WorkspaceRole.OWNER));
+        return WorkspaceResponse.from(workspace);
     }
 
     @Transactional(readOnly = true)
