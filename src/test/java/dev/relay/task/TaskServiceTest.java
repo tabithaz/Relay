@@ -117,6 +117,37 @@ class TaskServiceTest {
     }
 
     @Test
+    void unchangedTaskDetailsDoNotTriggerRepositoryWrite() {
+        Instant due = Instant.parse("2026-11-01T12:00:00Z");
+        Task task = new Task(project, "Fix login", "Handle timeouts", TaskPriority.HIGH, due);
+        Instant originalUpdatedAt = task.getUpdatedAt();
+        when(tasks.findByIdAndProject_IdAndProject_Workspace_Id(9L, 7L, 1L))
+                .thenReturn(Optional.of(task));
+
+        TaskResponse unchanged = service.update(1L, 7L, 9L,
+                "  Fix login  ", "  Handle timeouts  ", TaskPriority.HIGH, due);
+
+        assertEquals("Fix login", unchanged.title());
+        assertEquals("Handle timeouts", unchanged.description());
+        assertEquals(originalUpdatedAt, unchanged.updatedAt());
+        verify(tasks, never()).save(any());
+    }
+
+    @Test
+    void changedTaskDetailsArePersisted() {
+        Task task = new Task(project, "Fix login", null, TaskPriority.NORMAL, null);
+        when(tasks.findByIdAndProject_IdAndProject_Workspace_Id(9L, 7L, 1L))
+                .thenReturn(Optional.of(task));
+        when(tasks.save(task)).thenReturn(task);
+
+        TaskResponse changed = service.update(1L, 7L, 9L,
+                "Fix login", "Handle timeouts", TaskPriority.NORMAL, null);
+
+        assertEquals("Handle timeouts", changed.description());
+        verify(tasks).save(task);
+    }
+
+    @Test
     void updatesTaskDetailsAndClearsOptionalFields() {
         Instant due = Instant.parse("2026-11-01T12:00:00Z");
         Task task = new Task(project, "Old", "Old description", TaskPriority.LOW, due);
