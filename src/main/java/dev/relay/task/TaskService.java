@@ -4,6 +4,7 @@ import dev.relay.project.Project;
 import dev.relay.project.ProjectNotFoundException;
 import dev.relay.project.ProjectRepository;
 import java.time.Instant;
+import java.util.Objects;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -50,7 +51,15 @@ public class TaskService {
                                String title, String description, TaskPriority priority,
                                Instant dueAt) {
         Task task = requireTask(workspaceId, projectId, taskId);
-        task.updateDetails(title.trim(), normalize(description), priority, dueAt);
+        String normalizedTitle = title.trim();
+        String normalizedDescription = normalize(description);
+        if (Objects.equals(task.getTitle(), normalizedTitle)
+                && Objects.equals(task.getDescription(), normalizedDescription)
+                && task.getPriority() == priority
+                && Objects.equals(task.getDueAt(), dueAt)) {
+            return TaskResponse.from(task);
+        }
+        task.updateDetails(normalizedTitle, normalizedDescription, priority, dueAt);
         return TaskResponse.from(tasks.save(task));
     }
 
