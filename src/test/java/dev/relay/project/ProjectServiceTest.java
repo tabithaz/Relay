@@ -96,6 +96,54 @@ class ProjectServiceTest {
     }
 
     @Test
+    void blankDescriptionIsStoredAsNullOnCreate() {
+        when(workspaces.findById(1L)).thenReturn(Optional.of(workspace));
+        when(projects.saveAndFlush(any(Project.class))).thenAnswer(call -> call.getArgument(0));
+
+        ProjectResponse created = service.create(1L, "Platform", "platform", "   ");
+
+        assertNull(created.description());
+        ArgumentCaptor<Project> captor = ArgumentCaptor.forClass(Project.class);
+        verify(projects).saveAndFlush(captor.capture());
+        assertNull(captor.getValue().getDescription());
+    }
+
+    @Test
+    void blankDescriptionClearsExistingDescription() {
+        Project existing = new Project(workspace, "Platform", "platform", "Old description");
+        when(projects.findByIdAndWorkspace_Id(7L, 1L)).thenReturn(Optional.of(existing));
+        when(projects.save(existing)).thenReturn(existing);
+
+        ProjectResponse updated = service.update(1L, 7L, " Platform ", "  ");
+
+        assertNull(updated.description());
+        verify(projects).save(existing);
+    }
+
+    @Test
+    void unchangedNormalizedDetailsDoNotTriggerSave() {
+        Project existing = new Project(workspace, "Platform", "platform", "Roadmap");
+        when(projects.findByIdAndWorkspace_Id(7L, 1L)).thenReturn(Optional.of(existing));
+
+        ProjectResponse updated = service.update(1L, 7L, "  Platform  ", "  Roadmap  ");
+
+        assertEquals("Platform", updated.name());
+        assertEquals("Roadmap", updated.description());
+        verify(projects, never()).save(any());
+    }
+
+    @Test
+    void repeatedEmptyDescriptionDoesNotTriggerSave() {
+        Project existing = new Project(workspace, "Platform", "platform", null);
+        when(projects.findByIdAndWorkspace_Id(7L, 1L)).thenReturn(Optional.of(existing));
+
+        ProjectResponse updated = service.update(1L, 7L, "Platform", "  ");
+
+        assertNull(updated.description());
+        verify(projects, never()).save(any());
+    }
+
+    @Test
     void listsOnlyWorkspaceProjectsWithStablePagination() {
         when(workspaces.existsById(1L)).thenReturn(true);
         when(projects.findByWorkspace_Id(eq(1L), any(Pageable.class)))
