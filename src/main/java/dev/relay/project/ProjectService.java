@@ -3,6 +3,7 @@ package dev.relay.project;
 import dev.relay.workspace.Workspace;
 import dev.relay.workspace.WorkspaceNotFoundException;
 import dev.relay.workspace.WorkspaceRepository;
+import java.util.Objects;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -58,11 +59,21 @@ public class ProjectService {
                                   String name, String description) {
         Project project = projects.findByIdAndWorkspace_Id(projectId, workspaceId)
                 .orElseThrow(ProjectNotFoundException::new);
-        project.updateDetails(name.trim(), normalize(description));
+        String normalizedName = name.trim();
+        String normalizedDescription = normalize(description);
+        if (Objects.equals(project.getName(), normalizedName)
+                && Objects.equals(project.getDescription(), normalizedDescription)) {
+            return ProjectResponse.from(project);
+        }
+        project.updateDetails(normalizedName, normalizedDescription);
         return ProjectResponse.from(projects.save(project));
     }
 
     private static String normalize(String description) {
-        return description == null ? null : description.trim();
+        if (description == null) {
+            return null;
+        }
+        String trimmed = description.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }
