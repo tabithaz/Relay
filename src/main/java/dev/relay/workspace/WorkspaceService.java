@@ -47,7 +47,11 @@ public class WorkspaceService {
     public WorkspaceResponse rename(Long id, String name) {
         Workspace workspace = workspaces.findById(id)
                 .orElseThrow(WorkspaceNotFoundException::new);
-        workspace.rename(name.trim());
+        String normalizedName = name.trim();
+        if (workspace.getName().equals(normalizedName)) {
+            return WorkspaceResponse.from(workspace);
+        }
+        workspace.rename(normalizedName);
         return WorkspaceResponse.from(workspaces.save(workspace));
     }
 }

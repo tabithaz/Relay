@@ -74,6 +74,29 @@ class WorkspaceServiceTest {
     }
 
     @Test
+    void skipsSaveWhenWorkspaceNameIsUnchanged() {
+        Workspace existing = new Workspace("Product Team", "product-team");
+        when(workspaces.findById(5L)).thenReturn(Optional.of(existing));
+
+        WorkspaceResponse updated = service.rename(5L, "Product Team");
+
+        assertEquals("Product Team", updated.name());
+        assertEquals("product-team", updated.slug());
+        verify(workspaces, never()).save(any());
+    }
+
+    @Test
+    void skipsSaveWhenOnlyWhitespaceDiffers() {
+        Workspace existing = new Workspace("Product Team", "product-team");
+        when(workspaces.findById(5L)).thenReturn(Optional.of(existing));
+
+        WorkspaceResponse updated = service.rename(5L, "  Product Team  ");
+
+        assertEquals("Product Team", updated.name());
+        verify(workspaces, never()).save(any());
+    }
+
+    @Test
     void listsWorkspacesWithBoundedStablePagination() {
         when(workspaces.findAll(any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(new Workspace("Engineering", "engineering"))));
