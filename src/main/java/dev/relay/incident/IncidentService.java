@@ -1,6 +1,7 @@
 package dev.relay.incident;
 
 import java.util.List;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,7 +18,8 @@ public class IncidentService {
 
     @Transactional(readOnly = true)
     public List<Incident> list() {
-        return incidents.findAll();
+        Sort newestFirst = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
+        return incidents.findAll(newestFirst);
     }
 
     public Incident create(String title, String description) {

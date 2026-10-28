@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Sort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -18,6 +19,25 @@ class IncidentServiceTest {
     @Mock IncidentRepository incidents;
     @Mock IncidentActivityRepository activities;
     @InjectMocks IncidentService service;
+
+    @Test
+    void listsIncidentsNewestFirstWithStableIdTieBreaker() {
+        Incident newest = new Incident("Recent outage", "Details");
+        Incident older = new Incident("Earlier outage", "Details");
+        when(incidents.findAll(any(Sort.class))).thenReturn(List.of(newest, older));
+
+        assertEquals(List.of(newest, older), service.list());
+
+        ArgumentCaptor<Sort> captor = ArgumentCaptor.forClass(Sort.class);
+        verify(incidents).findAll(captor.capture());
+        assertEquals(List.of("createdAt", "id"),
+                captor.getValue().stream().map(Sort.Order::getProperty).toList());
+        assertEquals(Sort.Direction.DESC,
+                captor.getValue().getOrderFor("createdAt").getDirection());
+        assertEquals(Sort.Direction.DESC,
+                captor.getValue().getOrderFor("id").getDirection());
+        verify(incidents, never()).findAll();
+    }
 
     @Test
     void creatingIncidentRecordsInitialActivity() {
