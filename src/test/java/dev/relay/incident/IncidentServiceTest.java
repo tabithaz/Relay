@@ -85,6 +85,20 @@ class IncidentServiceTest {
     }
 
     @Test
+    void nullStatusIsRejectedBeforeAnyRepositoryAccess() {
+        assertThrows(NullPointerException.class, () -> service.updateStatus(7L, null));
+        verifyNoInteractions(incidents, activities);
+    }
+
+    @Test
+    void incidentRejectsNullStatusWithoutChangingItsState() {
+        Incident incident = new Incident("Outage", "Details");
+
+        assertThrows(NullPointerException.class, () -> incident.setStatus(null));
+        assertEquals(IncidentStatus.INVESTIGATING, incident.getStatus());
+    }
+
+    @Test
     void missingIncidentCannotBeUpdated() {
         when(incidents.findById(99L)).thenReturn(Optional.empty());
 

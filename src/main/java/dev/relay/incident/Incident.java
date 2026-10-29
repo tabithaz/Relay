@@ -2,6 +2,7 @@ package dev.relay.incident;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.Objects;
 
 @Entity
 @Table(name = "incidents")
@@ -21,5 +22,7 @@ public class Incident {
     public Long getId(){return id;} public String getTitle(){return title;}
     public String getDescription(){return description;} public IncidentStatus getStatus(){return status;}
     public Instant getCreatedAt(){return createdAt;}
-    public void setStatus(IncidentStatus status){this.status=status;}
+    public void setStatus(IncidentStatus status){
+        this.status = Objects.requireNonNull(status, "status must not be null");
+    }
 }

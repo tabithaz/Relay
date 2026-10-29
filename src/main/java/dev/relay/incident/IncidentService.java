@@ -1,6 +1,7 @@
 package dev.relay.incident;
 
 import java.util.List;
+import java.util.Objects;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ public class IncidentService {
     }
 
     public Incident updateStatus(Long id, IncidentStatus nextStatus) {
+        Objects.requireNonNull(nextStatus, "nextStatus must not be null");
         Incident incident = incidents.findById(id).orElseThrow(IncidentNotFoundException::new);
         if (incident.getStatus() == nextStatus) {
             return incident;
