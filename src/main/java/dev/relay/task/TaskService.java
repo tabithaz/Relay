@@ -24,6 +24,7 @@ public class TaskService {
 
     public TaskResponse create(Long workspaceId, Long projectId, String title,
                                String description, TaskPriority priority, Instant dueAt) {
+        Objects.requireNonNull(priority, "priority");
         Project project = requireProject(workspaceId, projectId);
         Task task = new Task(project, title.trim(), normalize(description), priority, dueAt);
         return TaskResponse.from(tasks.save(task));
@@ -50,6 +51,7 @@ public class TaskService {
     public TaskResponse update(Long workspaceId, Long projectId, Long taskId,
                                String title, String description, TaskPriority priority,
                                Instant dueAt) {
+        Objects.requireNonNull(priority, "priority");
         Task task = requireTask(workspaceId, projectId, taskId);
         String normalizedTitle = title.trim();
         String normalizedDescription = normalize(description);
@@ -65,6 +67,7 @@ public class TaskService {
 
     public TaskResponse changeStatus(Long workspaceId, Long projectId,
                                      Long taskId, TaskStatus status) {
+        Objects.requireNonNull(status, "status");
         Task task = requireTask(workspaceId, projectId, taskId);
         if (task.getStatus() == status) {
             return TaskResponse.from(task);

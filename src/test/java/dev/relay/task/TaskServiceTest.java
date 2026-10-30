@@ -164,4 +164,25 @@ class TaskServiceTest {
         assertEquals(TaskPriority.URGENT, updated.priority());
         assertSame(project, task.getProject());
     }
+
+    @Test
+    void rejectsNullPriorityBeforeTaskCreation() {
+        assertThrows(NullPointerException.class,
+                () -> service.create(1L, 7L, "Fix login", null, null, null));
+        verifyNoInteractions(projects, tasks);
+    }
+
+    @Test
+    void rejectsNullPriorityBeforeTaskUpdate() {
+        assertThrows(NullPointerException.class,
+                () -> service.update(1L, 7L, 9L, "Fix login", null, null, null));
+        verifyNoInteractions(projects, tasks);
+    }
+
+    @Test
+    void rejectsNullStatusBeforeTaskLookup() {
+        assertThrows(NullPointerException.class,
+                () -> service.changeStatus(1L, 7L, 9L, null));
+        verifyNoInteractions(projects, tasks);
+    }
 }
