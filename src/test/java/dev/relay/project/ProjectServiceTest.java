@@ -67,10 +67,30 @@ class ProjectServiceTest {
     void translatesConcurrentSlugCollisionToConflict() {
         when(workspaces.findById(1L)).thenReturn(Optional.of(workspace));
         when(projects.saveAndFlush(any(Project.class)))
-                .thenThrow(new DataIntegrityViolationException("unique constraint"));
+                .thenThrow(constraintViolation("uk_projects_workspace_slug"));
 
         assertThrows(ProjectSlugConflictException.class,
                 () -> service.create(1L, "Platform", "platform", null));
+    }
+
+    @Test
+    void unrelatedConstraintViolationIsNotReportedAsDuplicateSlug() {
+        when(workspaces.findById(1L)).thenReturn(Optional.of(workspace));
+        DataIntegrityViolationException failure = constraintViolation("fk_projects_workspace");
+        when(projects.saveAndFlush(any(Project.class))).thenThrow(failure);
+
+        assertSame(failure, assertThrows(DataIntegrityViolationException.class,
+                () -> service.create(1L, "Platform", "platform", null)));
+    }
+
+    @Test
+    void unidentifiedConstraintViolationIsNotReportedAsDuplicateSlug() {
+        when(workspaces.findById(1L)).thenReturn(Optional.of(workspace));
+        DataIntegrityViolationException failure = new DataIntegrityViolationException("unknown constraint");
+        when(projects.saveAndFlush(any(Project.class))).thenThrow(failure);
+
+        assertSame(failure, assertThrows(DataIntegrityViolationException.class,
+                () -> service.create(1L, "Platform", "platform", null)));
     }
 
     @Test
@@ -167,4 +187,10 @@ class ProjectServiceTest {
         assertThrows(WorkspaceNotFoundException.class, () -> service.list(404L, 0, 20));
         verifyNoInteractions(projects);
     }
+    private static DataIntegrityViolationException constraintViolation(String name) {
+        return new DataIntegrityViolationException("constraint violation",
+                new org.hibernate.exception.ConstraintViolationException(
+                        "constraint violation", new java.sql.SQLException("constraint violation"), name));
+    }
+
 }

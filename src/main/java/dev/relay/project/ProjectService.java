@@ -5,6 +5,7 @@ import dev.relay.workspace.WorkspaceNotFoundException;
 import dev.relay.workspace.WorkspaceRepository;
 import java.util.Objects;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -34,7 +35,15 @@ public class ProjectService {
             Project project = new Project(workspace, name.trim(), slug, normalize(description));
             return ProjectResponse.from(projects.saveAndFlush(project));
         } catch (DataIntegrityViolationException exception) {
-            throw new ProjectSlugConflictException();
+            Throwable cause = exception;
+            while (cause != null) {
+                if (cause instanceof ConstraintViolationException violation
+                        && "uk_projects_workspace_slug".equalsIgnoreCase(violation.getConstraintName())) {
+                    throw new ProjectSlugConflictException();
+                }
+                cause = cause.getCause();
+            }
+            throw exception;
         }
     }
 
