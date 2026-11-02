@@ -1,5 +1,6 @@
 package dev.relay.workspace;
 
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,7 +27,15 @@ public class WorkspaceService {
             return WorkspaceResponse.from(
                     workspaces.saveAndFlush(new Workspace(name.trim(), slug)));
         } catch (DataIntegrityViolationException exception) {
-            throw new WorkspaceSlugConflictException();
+            Throwable cause = exception;
+            while (cause != null) {
+                if (cause instanceof ConstraintViolationException violation
+                        && "uk_workspaces_slug".equalsIgnoreCase(violation.getConstraintName())) {
+                    throw new WorkspaceSlugConflictException();
+                }
+                cause = cause.getCause();
+            }
+            throw exception;
         }
     }
 

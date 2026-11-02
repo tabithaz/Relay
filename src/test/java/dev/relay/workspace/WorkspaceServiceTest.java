@@ -48,10 +48,28 @@ class WorkspaceServiceTest {
     @Test
     void translatesConcurrentSlugCollisionToConflict() {
         when(workspaces.saveAndFlush(any(Workspace.class)))
-                .thenThrow(new DataIntegrityViolationException("unique constraint"));
+                .thenThrow(constraintViolation("uk_workspaces_slug"));
 
         assertThrows(WorkspaceSlugConflictException.class,
                 () -> service.create("Product Team", "product-team"));
+    }
+
+    @Test
+    void unrelatedConstraintViolationIsNotReportedAsDuplicateSlug() {
+        DataIntegrityViolationException failure = constraintViolation("workspaces_name_check");
+        when(workspaces.saveAndFlush(any(Workspace.class))).thenThrow(failure);
+
+        assertSame(failure, assertThrows(DataIntegrityViolationException.class,
+                () -> service.create("Product Team", "product-team")));
+    }
+
+    @Test
+    void unidentifiedConstraintViolationIsNotReportedAsDuplicateSlug() {
+        DataIntegrityViolationException failure = new DataIntegrityViolationException("unknown constraint");
+        when(workspaces.saveAndFlush(any(Workspace.class))).thenThrow(failure);
+
+        assertSame(failure, assertThrows(DataIntegrityViolationException.class,
+                () -> service.create("Product Team", "product-team")));
     }
 
     @Test
@@ -110,5 +128,10 @@ class WorkspaceServiceTest {
         assertEquals(10, captor.getValue().getPageSize());
         assertNotNull(captor.getValue().getSort().getOrderFor("createdAt"));
         assertNotNull(captor.getValue().getSort().getOrderFor("id"));
+    }
+    private static DataIntegrityViolationException constraintViolation(String name) {
+        return new DataIntegrityViolationException("constraint violation",
+                new org.hibernate.exception.ConstraintViolationException(
+                        "constraint violation", new java.sql.SQLException("constraint violation"), name));
     }
 }
