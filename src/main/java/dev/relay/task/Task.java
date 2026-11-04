@@ -82,13 +82,18 @@ public class Task {
         this.description = description;
         this.priority = priority;
         this.dueAt = dueAt;
-        this.updatedAt = Instant.now();
+        advanceUpdatedAt();
+    }
+
+    private void advanceUpdatedAt() {
+        Instant now = Instant.now();
+        this.updatedAt = now.isAfter(updatedAt) ? now : updatedAt.plusNanos(1);
     }
 
     public void changeStatus(TaskStatus status) {
         if (this.status != status) {
             this.status = Objects.requireNonNull(status);
-            this.updatedAt = Instant.now();
+            advanceUpdatedAt();
         }
     }
 }
