@@ -17,6 +17,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
@@ -163,6 +164,28 @@ class TaskServiceTest {
         assertNull(updated.dueAt());
         assertEquals(TaskPriority.URGENT, updated.priority());
         assertSame(project, task.getProject());
+    }
+
+    @Test
+    void detailUpdatesAdvanceTimestampEvenWhenClockMovesBackward() {
+        Task task = new Task(project, "Fix login", null, TaskPriority.NORMAL, null);
+        Instant previous = Instant.now().plusSeconds(60);
+        ReflectionTestUtils.setField(task, "updatedAt", previous);
+
+        task.updateDetails("Fix login", "New description", TaskPriority.NORMAL, null);
+
+        assertEquals(previous.plusNanos(1), task.getUpdatedAt());
+    }
+
+    @Test
+    void statusChangesAdvanceTimestampEvenWhenClockMovesBackward() {
+        Task task = new Task(project, "Fix login", null, TaskPriority.NORMAL, null);
+        Instant previous = Instant.now().plusSeconds(60);
+        ReflectionTestUtils.setField(task, "updatedAt", previous);
+
+        task.changeStatus(TaskStatus.IN_PROGRESS);
+
+        assertEquals(previous.plusNanos(1), task.getUpdatedAt());
     }
 
     @Test
