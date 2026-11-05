@@ -72,6 +72,7 @@ public class Task {
 
     public void updateDetails(String title, String description,
                               TaskPriority priority, Instant dueAt) {
+        Objects.requireNonNull(priority, "priority");
         if (Objects.equals(this.title, title)
                 && Objects.equals(this.description, description)
                 && this.priority == priority
