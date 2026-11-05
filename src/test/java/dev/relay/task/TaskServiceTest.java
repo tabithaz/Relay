@@ -189,6 +189,22 @@ class TaskServiceTest {
     }
 
     @Test
+    void directDetailUpdateRejectsNullPriorityWithoutMutatingTask() {
+        Instant due = Instant.parse("2026-11-01T12:00:00Z");
+        Task task = new Task(project, "Original", "Original description", TaskPriority.HIGH, due);
+        Instant originalUpdatedAt = task.getUpdatedAt();
+
+        assertThrows(NullPointerException.class,
+                () -> task.updateDetails("Changed", "Changed description", null, null));
+
+        assertEquals("Original", task.getTitle());
+        assertEquals("Original description", task.getDescription());
+        assertEquals(TaskPriority.HIGH, task.getPriority());
+        assertEquals(due, task.getDueAt());
+        assertEquals(originalUpdatedAt, task.getUpdatedAt());
+    }
+
+    @Test
     void rejectsNullPriorityBeforeTaskCreation() {
         assertThrows(NullPointerException.class,
                 () -> service.create(1L, 7L, "Fix login", null, null, null));
