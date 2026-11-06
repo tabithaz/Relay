@@ -24,7 +24,15 @@ public class IncidentService {
     }
 
     public Incident create(String title, String description) {
-        Incident incident = incidents.save(new Incident(title.trim(), description.trim()));
+        String normalizedTitle = Objects.requireNonNull(title, "title must not be null").trim();
+        String normalizedDescription = Objects.requireNonNull(description, "description must not be null").trim();
+        if (normalizedTitle.isEmpty() || normalizedDescription.isEmpty()) {
+            throw new IllegalArgumentException("incident title and description must not be blank");
+        }
+        if (normalizedTitle.length() > 255 || normalizedDescription.length() > 2000) {
+            throw new IllegalArgumentException("incident title or description exceeds maximum length");
+        }
+        Incident incident = incidents.save(new Incident(normalizedTitle, normalizedDescription));
         activities.save(IncidentActivity.created(incident));
         return incident;
     }
