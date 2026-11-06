@@ -128,4 +128,24 @@ class IncidentServiceTest {
         assertThrows(IncidentNotFoundException.class, () -> service.activityFor(99L));
         verifyNoInteractions(activities);
     }
+    @Test
+    void invalidIncidentDetailsAreRejectedBeforePersistence() {
+        assertThrows(NullPointerException.class, () -> service.create(null, "Details"));
+        assertThrows(NullPointerException.class, () -> service.create("Outage", null));
+        assertThrows(IllegalArgumentException.class, () -> service.create("   ", "Details"));
+        assertThrows(IllegalArgumentException.class, () -> service.create("Outage", "   "));
+        assertThrows(IllegalArgumentException.class, () -> service.create("x".repeat(256), "Details"));
+        assertThrows(IllegalArgumentException.class, () -> service.create("Outage", "x".repeat(2001)));
+        verifyNoInteractions(incidents, activities);
+    }
+
+    @Test
+    void incidentDetailsAtMaximumLengthAreAccepted() {
+        when(incidents.save(any(Incident.class))).thenAnswer(call -> call.getArgument(0));
+        Incident created = service.create("x".repeat(255), "y".repeat(2000));
+        assertEquals(255, created.getTitle().length());
+        assertEquals(2000, created.getDescription().length());
+        verify(activities).save(any(IncidentActivity.class));
+    }
+
 }
