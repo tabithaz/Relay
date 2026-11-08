@@ -25,8 +25,10 @@ public class TaskService {
     public TaskResponse create(Long workspaceId, Long projectId, String title,
                                String description, TaskPriority priority, Instant dueAt) {
         Objects.requireNonNull(priority, "priority");
+        String normalizedTitle = validateTitle(title);
+        String normalizedDescription = validateDescription(description);
         Project project = requireProject(workspaceId, projectId);
-        Task task = new Task(project, title.trim(), normalize(description), priority, dueAt);
+        Task task = new Task(project, normalizedTitle, normalizedDescription, priority, dueAt);
         return TaskResponse.from(tasks.save(task));
     }
 
@@ -52,9 +54,9 @@ public class TaskService {
                                String title, String description, TaskPriority priority,
                                Instant dueAt) {
         Objects.requireNonNull(priority, "priority");
+        String normalizedTitle = validateTitle(title);
+        String normalizedDescription = validateDescription(description);
         Task task = requireTask(workspaceId, projectId, taskId);
-        String normalizedTitle = title.trim();
-        String normalizedDescription = normalize(description);
         if (Objects.equals(task.getTitle(), normalizedTitle)
                 && Objects.equals(task.getDescription(), normalizedDescription)
                 && task.getPriority() == priority
@@ -87,11 +89,23 @@ public class TaskService {
                 .orElseThrow(TaskNotFoundException::new);
     }
 
-    private static String normalize(String description) {
+    private static String validateTitle(String title) {
+        Objects.requireNonNull(title, "title");
+        String trimmed = title.trim();
+        if (trimmed.isEmpty() || trimmed.length() > 160) {
+            throw new IllegalArgumentException("title must contain 1 to 160 characters");
+        }
+        return trimmed;
+    }
+
+    private static String validateDescription(String description) {
         if (description == null) {
             return null;
         }
         String trimmed = description.trim();
+        if (trimmed.length() > 4000) {
+            throw new IllegalArgumentException("description must not exceed 4000 characters");
+        }
         return trimmed.isEmpty() ? null : trimmed;
     }
 }
