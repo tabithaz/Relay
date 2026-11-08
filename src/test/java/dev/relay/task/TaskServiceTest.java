@@ -224,4 +224,34 @@ class TaskServiceTest {
                 () -> service.changeStatus(1L, 7L, 9L, null));
         verifyNoInteractions(projects, tasks);
     }
+    @Test
+    void rejectsInvalidTaskTextBeforeRepositoryAccess() {
+        assertThrows(NullPointerException.class,
+                () -> service.create(1L, 7L, null, null, TaskPriority.NORMAL, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.create(1L, 7L, "   ", null, TaskPriority.NORMAL, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.create(1L, 7L, "x".repeat(161), null, TaskPriority.NORMAL, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.create(1L, 7L, "Valid", "x".repeat(4001), TaskPriority.NORMAL, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.update(1L, 7L, 9L, "   ", null, TaskPriority.NORMAL, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.update(1L, 7L, 9L, "Valid", "x".repeat(4001), TaskPriority.NORMAL, null));
+        verifyNoInteractions(projects, tasks);
+    }
+
+    @Test
+    void acceptsTaskTextAtColumnLengthBoundaries() {
+        when(projects.findByIdAndWorkspace_Id(7L, 1L)).thenReturn(Optional.of(project));
+        when(tasks.save(any(Task.class))).thenAnswer(call -> call.getArgument(0));
+
+        TaskResponse created = service.create(1L, 7L, "x".repeat(160),
+                "y".repeat(4000), TaskPriority.NORMAL, null);
+
+        assertEquals(160, created.title().length());
+        assertEquals(4000, created.description().length());
+        verify(tasks).save(any(Task.class));
+    }
+
 }
