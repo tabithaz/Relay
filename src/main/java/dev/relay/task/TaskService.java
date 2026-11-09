@@ -35,6 +35,9 @@ public class TaskService {
     @Transactional(readOnly = true)
     public Page<TaskResponse> list(Long workspaceId, Long projectId,
                                    TaskStatus status, int page, int size) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new IllegalArgumentException("page must be nonnegative and size must be between 1 and 100");
+        }
         requireProject(workspaceId, projectId);
         Sort sort = Sort.by(Sort.Direction.DESC, "createdAt")
                 .and(Sort.by(Sort.Direction.DESC, "id"));
