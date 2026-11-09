@@ -75,6 +75,30 @@ class TaskServiceTest {
     }
 
     @Test
+    void rejectsInvalidPaginationBeforeRepositoryAccess() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.list(1L, 7L, null, -1, 20));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.list(1L, 7L, null, 0, 0));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.list(1L, 7L, TaskStatus.TODO, 0, 101));
+        verifyNoInteractions(projects, tasks);
+    }
+
+    @Test
+    void acceptsMaximumPageSize() {
+        when(projects.findByIdAndWorkspace_Id(7L, 1L)).thenReturn(Optional.of(project));
+        when(tasks.findByProject_Id(eq(7L), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        service.list(1L, 7L, null, 0, 100);
+
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(tasks).findByProject_Id(eq(7L), captor.capture());
+        assertEquals(100, captor.getValue().getPageSize());
+    }
+
+    @Test
     void listsAllStatusesWhenFilterOmitted() {
         when(projects.findByIdAndWorkspace_Id(7L, 1L)).thenReturn(Optional.of(project));
         when(tasks.findByProject_Id(eq(7L), any(Pageable.class)))
