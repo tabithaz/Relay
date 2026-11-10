@@ -187,6 +187,28 @@ class ProjectServiceTest {
         assertThrows(WorkspaceNotFoundException.class, () -> service.list(404L, 0, 20));
         verifyNoInteractions(projects);
     }
+    @Test
+    void rejectsInvalidPaginationBeforeRepositoryAccess() {
+        assertThrows(IllegalArgumentException.class, () -> service.list(1L, -1, 20));
+        assertThrows(IllegalArgumentException.class, () -> service.list(1L, 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> service.list(1L, 0, -1));
+        assertThrows(IllegalArgumentException.class, () -> service.list(1L, 0, 101));
+        verifyNoInteractions(workspaces, projects);
+    }
+
+    @Test
+    void acceptsMaximumPageSize() {
+        when(workspaces.existsById(1L)).thenReturn(true);
+        when(projects.findByWorkspace_Id(eq(1L), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        service.list(1L, 0, 100);
+
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(projects).findByWorkspace_Id(eq(1L), captor.capture());
+        assertEquals(100, captor.getValue().getPageSize());
+    }
+
     private static DataIntegrityViolationException constraintViolation(String name) {
         return new DataIntegrityViolationException("constraint violation",
                 new org.hibernate.exception.ConstraintViolationException(
