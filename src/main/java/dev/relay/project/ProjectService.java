@@ -49,6 +49,9 @@ public class ProjectService {
 
     @Transactional(readOnly = true)
     public Page<ProjectResponse> list(Long workspaceId, int page, int size) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new IllegalArgumentException("page must be nonnegative and size must be between 1 and 100");
+        }
         if (!workspaces.existsById(workspaceId)) {
             throw new WorkspaceNotFoundException();
         }
