@@ -2,6 +2,8 @@ package dev.relay.incident;
 
 import java.util.List;
 import java.util.Objects;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,9 +20,12 @@ public class IncidentService {
     }
 
     @Transactional(readOnly = true)
-    public List<Incident> list() {
+    public Page<Incident> list(int page, int size) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new IllegalArgumentException("page must be nonnegative and size must be between 1 and 100");
+        }
         Sort newestFirst = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
-        return incidents.findAll(newestFirst);
+        return incidents.findAll(PageRequest.of(page, size, newestFirst));
     }
 
     public Incident create(String title, String description) {
