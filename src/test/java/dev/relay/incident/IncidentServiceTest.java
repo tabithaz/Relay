@@ -6,6 +6,8 @@ import static org.mockito.Mockito.*;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,19 +26,39 @@ class IncidentServiceTest {
     void listsIncidentsNewestFirstWithStableIdTieBreaker() {
         Incident newest = new Incident("Recent outage", "Details");
         Incident older = new Incident("Earlier outage", "Details");
-        when(incidents.findAll(any(Sort.class))).thenReturn(List.of(newest, older));
+        when(incidents.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of(newest, older)));
 
-        assertEquals(List.of(newest, older), service.list());
+        assertEquals(List.of(newest, older), service.list(0, 20).getContent());
 
-        ArgumentCaptor<Sort> captor = ArgumentCaptor.forClass(Sort.class);
+        ArgumentCaptor<PageRequest> captor = ArgumentCaptor.forClass(PageRequest.class);
         verify(incidents).findAll(captor.capture());
+        assertEquals(0, captor.getValue().getPageNumber());
+        assertEquals(20, captor.getValue().getPageSize());
         assertEquals(List.of("createdAt", "id"),
-                captor.getValue().stream().map(Sort.Order::getProperty).toList());
+                captor.getValue().getSort().stream().map(Sort.Order::getProperty).toList());
         assertEquals(Sort.Direction.DESC,
-                captor.getValue().getOrderFor("createdAt").getDirection());
+                captor.getValue().getSort().getOrderFor("createdAt").getDirection());
         assertEquals(Sort.Direction.DESC,
                 captor.getValue().getOrderFor("id").getDirection());
         verify(incidents, never()).findAll();
+    }
+
+    @Test
+    void incidentPaginationRejectsInvalidBoundariesBeforeDatabaseAccess() {
+        assertThrows(IllegalArgumentException.class, () -> service.list(-1, 20));
+        assertThrows(IllegalArgumentException.class, () -> service.list(0, 0));
+        assertThrows(IllegalArgumentException.class, () -> service.list(0, 101));
+        verifyNoInteractions(incidents, activities);
+    }
+
+    @Test
+    void incidentPaginationAcceptsLastAllowedPageSize() {
+        when(incidents.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+        service.list(2, 100);
+        ArgumentCaptor<PageRequest> captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(incidents).findAll(captor.capture());
+        assertEquals(2, captor.getValue().getPageNumber());
+        assertEquals(100, captor.getValue().getPageSize());
     }
 
     @Test
