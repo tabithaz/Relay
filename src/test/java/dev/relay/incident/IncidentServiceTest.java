@@ -39,7 +39,7 @@ class IncidentServiceTest {
         assertEquals(Sort.Direction.DESC,
                 captor.getValue().getSort().getOrderFor("createdAt").getDirection());
         assertEquals(Sort.Direction.DESC,
-                captor.getValue().getOrderFor("id").getDirection());
+                captor.getValue().getSort().getOrderFor("id").getDirection());
         verify(incidents, never()).findAll();
     }
 
