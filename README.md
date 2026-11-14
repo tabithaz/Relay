@@ -12,7 +12,7 @@ Relay is an evolving collaborative workspace for engineering teams. The current 
 - Create, list, retrieve, and update project tasks with priority, due dates, and status transitions
 - Filter tasks by status with stable pagination and strict workspace/project-scoped lookups
 - Project listing uses bounded, stable pagination and scoped project lookups
-- Create and list incidents
+- Create and list incidents with bounded, deterministic pagination
 - Change incident status (investigating, identified, monitoring, resolved)
 - Persist an activity entry when an incident is created or its status changes
 - Retrieve incident activity in chronological order
@@ -118,6 +118,14 @@ curl -X POST http://localhost:8080/api/incidents \
   -H 'Content-Type: application/json' \
   -d '{"title":"API outage","description":"Requests are timing out"}'
 ```
+
+List incidents (newest first, default page 0 and size 20; maximum size 100):
+
+```bash
+curl 'http://localhost:8080/api/incidents?page=0&size=20'
+```
+
+The response is a Spring Data page containing `content`, `totalElements`, `totalPages`, `number`, and `size`. Page must be nonnegative and size must be 1–100. Results sort by `createdAt` descending, then `id` descending for stable ties.
 
 Change its status (replace `1` with the returned ID):
 
