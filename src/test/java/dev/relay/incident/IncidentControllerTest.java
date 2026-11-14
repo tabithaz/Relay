@@ -1,10 +1,14 @@
 package dev.relay.incident;
 
 import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageImpl;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -15,6 +19,23 @@ import org.springframework.test.web.servlet.MockMvc;
 class IncidentControllerTest {
     @Autowired MockMvc mvc;
     @MockBean IncidentService service;
+
+    @Test
+    void incidentListUsesBoundedDefaultsAndPageResponse() throws Exception {
+        when(service.list(0, 20)).thenReturn(new PageImpl<>(List.of()));
+        mvc.perform(get("/api/incidents"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+        verify(service).list(0, 20);
+    }
+
+    @Test
+    void incidentListPassesRequestedPageAndSize() throws Exception {
+        when(service.list(2, 50)).thenReturn(new PageImpl<>(List.of()));
+        mvc.perform(get("/api/incidents?page=2&size=50"))
+                .andExpect(status().isOk());
+        verify(service).list(2, 50);
+    }
 
     @Test
     void rejectsBlankIncidentTitle() throws Exception {
