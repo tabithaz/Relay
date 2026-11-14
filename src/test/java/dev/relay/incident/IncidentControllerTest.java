@@ -38,6 +38,17 @@ class IncidentControllerTest {
     }
 
     @Test
+    void rejectsInvalidIncidentPaginationParameters() throws Exception {
+        mvc.perform(get("/api/incidents?page=-1&size=20"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/incidents?page=0&size=0"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/incidents?page=0&size=101"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(service);
+    }
+
+    @Test
     void rejectsBlankIncidentTitle() throws Exception {
         mvc.perform(post("/api/incidents")
                 .contentType(MediaType.APPLICATION_JSON)
