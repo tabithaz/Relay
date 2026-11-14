@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,8 +19,9 @@ public class IncidentController {
     }
 
     @GetMapping
-    public List<Incident> list() {
-        return service.list();
+    public Page<Incident> list(@RequestParam(defaultValue = "0") int page,
+                               @RequestParam(defaultValue = "20") int size) {
+        return service.list(page, size);
     }
 
     @PostMapping
