@@ -1,6 +1,8 @@
 package dev.relay.incident;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -19,8 +21,8 @@ public class IncidentController {
     }
 
     @GetMapping
-    public Page<Incident> list(@RequestParam(defaultValue = "0") int page,
-                               @RequestParam(defaultValue = "20") int size) {
+    public Page<Incident> list(@RequestParam(defaultValue = "0") @Min(0) int page,
+                               @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         return service.list(page, size);
     }
 
